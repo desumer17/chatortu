@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Ortu Siswa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-10">
+
+    <header class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg rounded-b-3xl mb-8">
+        <div class="max-w-3xl mx-auto px-6 py-8 text-center">
+            <div class="inline-block bg-white text-emerald-500 p-4 rounded-full shadow-md mb-4">
+                <i class="fa-solid fa-users fa-2x"></i>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight mb-2">Chat Ortu Siswa</h1>
+            <p class="text-emerald-50 text-sm md:text-base opacity-90">Aplikasi cerdas penghubung komunikasi antara sekolah dengan siswa, ayah, ibu, atau wali.</p>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4"><i class="fa-solid fa-magnifying-glass mr-2 text-emerald-500"></i>Cari Data Siswa</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="md:col-span-3">
+                    <input type="text" id="searchName" placeholder="Ketik nama siswa di sini..." 
+                        class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all">
+                </div>
+                
+                <div class="md:col-span-3 text-center text-sm text-slate-400 font-medium">ATAU FILTER BERDASARKAN</div>
+
+                <div class="md:col-span-1.5">
+                    <select id="filterKelas" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white">
+                        <option value="">Semua Kelas</option>
+                        </select>
+                </div>
+
+                <div class="md:col-span-1.5">
+                    <input type="number" id="filterAbsen" placeholder="No. Absen" 
+                        class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="text-center text-slate-500 py-10">
+            <i class="fa-solid fa-circle-notch fa-spin fa-2x mb-3 text-emerald-500"></i>
+            <p>Memuat data siswa...</p>
+        </div>
+
+        <div id="resultContainer" class="space-y-4">
+            </div>
+    </main>
+
+    <script>
+        // --- KONFIGURASI URL GOOGLE SHEETS CSV ---
+        // Ganti URL di bawah ini dengan URL CSV dari Google Sheets Anda
+        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2xRTY8qm9WuVcDNOo0vWwvLOVgao5bOWjxR590n5vJwqHE5M5ilEzNhn21T8-aPSDtc7WU6as2MIJ/pub?gid=0&single=true&output=csv";
+        
+        let studentData = [];
+
+        // Fungsi membersihkan dan memformat no WA menjadi format internasional (62...)
+        function formatWaNumber(number) {
+            if (!number) return null;
+            let formatted = number.toString().replace(/\D/g, ''); // Hapus semua karakter kecuali angka
+            if (formatted.startsWith('0')) {
+                formatted = '62' + formatted.substring(1);
+            }
+            return formatted;
+        }
+
+        // Fungsi fetch data dari Google Sheets
+        function fetchData() {
+            Papa.parse(GOOGLE_SHEETS_CSV_URL, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    studentData = results.data.filter(row => row.Nama_Siswa); // Hanya ambil yang ada namanya
+                    populateKelasDropdown();
+                    renderData(studentData);
+                    document.getElementById('loading').style.display = 'none';
+                },
+                error: function(error) {
+                    console.error("Error fetching data:", error);
+                    document.getElementById('loading').innerHTML = "<p class='text-red-500'>Gagal memuat data. Pastikan URL CSV benar dan publik.</p>";
+                }
+            });
+        }
+
+        // Isi otomatis dropdown kelas berdasarkan data
+        function populateKelasDropdown() {
+            const dropdown = document.getElementById('filterKelas');
+            const kelasSet = new Set(studentData.map(s => s.Kelas).filter(k => k));
+            const kelasArray = Array.from(kelasSet).sort();
+            
+            kelasArray.forEach(kelas => {
+                const option = document.createElement('option');
+                option.value = kelas;
+                option.textContent = kelas;
+                dropdown.appendChild(option);
+            });
+        }
+
+        // Fungsi merender tombol WA jika nomor tersedia
+        function createWaButton(label, number, iconColor) {
+            const waNum = formatWaNumber(number);
+            if (!waNum) return ''; // Sembunyikan jika kosong
+
+            return `
+                <a href="https://wa.me/${waNum}" target="_blank" 
+                   class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-${iconColor}-50 border border-slate-100 hover:border-${iconColor}-200 transition-all group">
+                    <div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-${iconColor}-500">
+                        <i class="fa-brands fa-whatsapp fa-lg"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-600 group-hover:text-${iconColor}-600">${label}</span>
+                </a>
+            `;
+        }
+
+        // Fungsi merender list siswa ke HTML
+        function renderData(data) {
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 bg-white rounded-2xl shadow-sm border border-slate-100">
+                        <i class="fa-solid fa-folder-open fa-3x text-slate-300 mb-3"></i>
+                        <p class="text-slate-500">Data tidak ditemukan.</p>
+                    </div>`;
+                return;
+            }
+
+            data.forEach(student => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow";
+                
+                // Gunakan Tailwind colors manual untuk safe-list (karena kita pakai dynamic string di createWaButton, kita pastikan warnanya fix di sini)
+                const waSiswa = formatWaNumber(student.WA_Siswa) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Siswa)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-emerald-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-emerald-600">Siswa</span></a>` : '';
+                const waAyah = formatWaNumber(student.WA_Ayah) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Ayah)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-blue-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-blue-600">Ayah</span></a>` : '';
+                const waIbu = formatWaNumber(student.WA_Ibu) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Ibu)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-pink-50 border border-slate-100 hover:border-pink-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-pink-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-pink-600">Ibu</span></a>` : '';
+                const waWali = formatWaNumber(student.WA_Wali) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Wali)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-purple-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-purple-600">Wali</span></a>` : '';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-800">${student.Nama_Siswa}</h3>
+                            <div class="flex gap-2 mt-1">
+                                <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-md">Kelas ${student.Kelas || '-'}</span>
+                                <span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">Absen: ${student.No_Absen || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
+                        ${waSiswa}
+                        ${waAyah}
+                        ${waIbu}
+                        ${waWali}
+                        ${(!waSiswa && !waAyah && !waIbu && !waWali) ? '<p class="col-span-4 text-xs text-slate-400 italic text-center">Tidak ada data kontak tersedia.</p>' : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Fungsi filter data cerdas
+        function filterData() {
+            const searchName = document.getElementById('searchName').value.toLowerCase();
+            const filterKelas = document.getElementById('filterKelas').value.toLowerCase();
+            const filterAbsen = document.getElementById('filterAbsen').value;
+
+            const filtered = studentData.filter(student => {
+                const matchName = student.Nama_Siswa && student.Nama_Siswa.toLowerCase().includes(searchName);
+                const matchKelas = filterKelas === "" || (student.Kelas && student.Kelas.toLowerCase() === filterKelas);
+                const matchAbsen = filterAbsen === "" || (student.No_Absen && student.No_Absen === filterAbsen);
+                
+                return matchName && matchKelas && matchAbsen;
+            });
+
+            renderData(filtered);
+        }
+
+        // Event Listeners untuk Search Bar & Dropdown
+        document.getElementById('searchName').addEventListener('input', filterData);
+        document.getElementById('filterKelas').addEventListener('change', filterData);
+        document.getElementById('filterAbsen').addEventListener('input', filterData);
+
+        // Inisialisasi awal
+        fetchData();
+    </script>
+</body>
+</html>
