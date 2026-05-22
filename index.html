@@ -14,86 +14,87 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen pb-10">
 
-    <header class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg rounded-b-3xl mb-8">
-        <div class="max-w-3xl mx-auto px-6 py-8 text-center">
-            <div class="inline-block bg-white text-emerald-500 p-4 rounded-full shadow-md mb-4">
-                <i class="fa-solid fa-users fa-2x"></i>
-            </div>
-            <h1 class="text-3xl font-bold tracking-tight mb-2">Chat Ortu Siswa</h1>
-            <p class="text-emerald-50 text-sm md:text-base opacity-90">Aplikasi cerdas penghubung komunikasi antara sekolah dengan siswa, ayah, ibu, atau wali.</p>
+    <header class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg rounded-b-3xl mb-6">
+        <div class="max-w-3xl mx-auto px-6 py-6 text-center">
+            <h1 class="text-2xl md:text-3xl font-bold tracking-tight mb-2"><i class="fa-solid fa-users mr-2"></i> Chat Ortu Siswa</h1>
+            <p class="text-emerald-50 text-xs md:text-sm opacity-90">Aplikasi penghubung komunikasi sekolah dengan siswa & orang tua.</p>
         </div>
     </header>
 
     <main class="max-w-3xl mx-auto px-4">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
-            <h2 class="text-lg font-semibold text-slate-700 mb-4"><i class="fa-solid fa-magnifying-glass mr-2 text-emerald-500"></i>Cari Data Siswa</h2>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-5 mb-6">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="fa-solid fa-magnifying-glass text-emerald-500"></i>
+                <h2 class="text-base font-semibold text-slate-700">Cari Data Siswa</h2>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div class="md:col-span-3">
-                    <input type="text" id="searchName" placeholder="Ketik nama siswa di sini..." 
-                        class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div class="sm:col-span-4">
+                    <input type="text" id="searchName" placeholder="Ketik nama siswa..." 
+                        class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
                 </div>
                 
-                <div class="md:col-span-3 text-center text-sm text-slate-400 font-medium">ATAU FILTER BERDASARKAN</div>
-
-                <div class="md:col-span-1.5">
-                    <select id="filterKelas" class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white">
+                <div class="sm:col-span-2">
+                    <select id="filterKelas" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white">
                         <option value="">Semua Kelas</option>
-                        </select>
+                    </select>
                 </div>
 
-                <div class="md:col-span-1.5">
+                <div class="sm:col-span-2">
                     <input type="number" id="filterAbsen" placeholder="No. Absen" 
-                        class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                        class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
                 </div>
             </div>
         </div>
 
-        <div id="loading" class="text-center text-slate-500 py-10">
-            <i class="fa-solid fa-circle-notch fa-spin fa-2x mb-3 text-emerald-500"></i>
-            <p>Memuat data siswa...</p>
+        <div id="loading" class="text-center text-slate-500 py-8">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 text-emerald-500"></i>
+            <p class="text-sm">Memuat data terbaru...</p>
         </div>
 
-        <div id="resultContainer" class="space-y-4">
+        <div id="resultContainer" class="space-y-3">
             </div>
     </main>
 
     <script>
         // --- KONFIGURASI URL GOOGLE SHEETS CSV ---
-        // Ganti URL di bawah ini dengan URL CSV dari Google Sheets Anda
+        // Link CSV milik Anda sudah dimasukkan di bawah ini
         const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2xRTY8qm9WuVcDNOo0vWwvLOVgao5bOWjxR590n5vJwqHE5M5ilEzNhn21T8-aPSDtc7WU6as2MIJ/pub?gid=0&single=true&output=csv";
         
         let studentData = [];
 
-        // Fungsi membersihkan dan memformat no WA menjadi format internasional (62...)
+        // Fungsi memformat no WA ke format internasional (62...)
         function formatWaNumber(number) {
             if (!number) return null;
-            let formatted = number.toString().replace(/\D/g, ''); // Hapus semua karakter kecuali angka
+            let formatted = number.toString().replace(/\D/g, ''); 
             if (formatted.startsWith('0')) {
                 formatted = '62' + formatted.substring(1);
             }
             return formatted;
         }
 
-        // Fungsi fetch data dari Google Sheets
+        // Fungsi fetch data dari Google Sheets (DENGAN KODE ANTI-CACHE)
         function fetchData() {
-            Papa.parse(GOOGLE_SHEETS_CSV_URL, {
+            // Trik menambahkan timestamp di akhir link agar browser selalu menarik data TERBARU
+            const urlAntiCache = GOOGLE_SHEETS_CSV_URL + "&t=" + new Date().getTime();
+
+            Papa.parse(urlAntiCache, {
                 download: true,
                 header: true,
                 complete: function(results) {
-                    studentData = results.data.filter(row => row.Nama_Siswa); // Hanya ambil yang ada namanya
+                    studentData = results.data.filter(row => row.Nama_Siswa); 
                     populateKelasDropdown();
                     renderData(studentData);
                     document.getElementById('loading').style.display = 'none';
                 },
                 error: function(error) {
                     console.error("Error fetching data:", error);
-                    document.getElementById('loading').innerHTML = "<p class='text-red-500'>Gagal memuat data. Pastikan URL CSV benar dan publik.</p>";
+                    document.getElementById('loading').innerHTML = "<p class='text-red-500 text-sm'>Gagal memuat data. Pastikan jaringan stabil.</p>";
                 }
             });
         }
 
-        // Isi otomatis dropdown kelas berdasarkan data
+        // Isi otomatis dropdown kelas
         function populateKelasDropdown() {
             const dropdown = document.getElementById('filterKelas');
             const kelasSet = new Set(studentData.map(s => s.Kelas).filter(k => k));
@@ -107,69 +108,55 @@
             });
         }
 
-        // Fungsi merender tombol WA jika nomor tersedia
-        function createWaButton(label, number, iconColor) {
-            const waNum = formatWaNumber(number);
-            if (!waNum) return ''; // Sembunyikan jika kosong
-
-            return `
-                <a href="https://wa.me/${waNum}" target="_blank" 
-                   class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-${iconColor}-50 border border-slate-100 hover:border-${iconColor}-200 transition-all group">
-                    <div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-${iconColor}-500">
-                        <i class="fa-brands fa-whatsapp fa-lg"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-600 group-hover:text-${iconColor}-600">${label}</span>
-                </a>
-            `;
-        }
-
-        // Fungsi merender list siswa ke HTML
+        // Fungsi merender list siswa ke HTML (DESAIN BARU: LEBIH RINGKAS & PADAT)
         function renderData(data) {
             const container = document.getElementById('resultContainer');
             container.innerHTML = '';
 
             if (data.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-10 bg-white rounded-2xl shadow-sm border border-slate-100">
-                        <i class="fa-solid fa-folder-open fa-3x text-slate-300 mb-3"></i>
-                        <p class="text-slate-500">Data tidak ditemukan.</p>
+                    <div class="text-center py-8 bg-white rounded-xl shadow-sm border border-slate-100">
+                        <i class="fa-solid fa-folder-open text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-sm text-slate-500">Data tidak ditemukan.</p>
                     </div>`;
                 return;
             }
 
             data.forEach(student => {
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow";
+                card.className = "bg-white rounded-xl shadow-sm border border-slate-100 p-3.5 hover:shadow-md transition-shadow";
                 
-                // Gunakan Tailwind colors manual untuk safe-list (karena kita pakai dynamic string di createWaButton, kita pastikan warnanya fix di sini)
-                const waSiswa = formatWaNumber(student.WA_Siswa) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Siswa)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-100 hover:border-emerald-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-emerald-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-emerald-600">Siswa</span></a>` : '';
-                const waAyah = formatWaNumber(student.WA_Ayah) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Ayah)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-blue-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-blue-600">Ayah</span></a>` : '';
-                const waIbu = formatWaNumber(student.WA_Ibu) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Ibu)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-pink-50 border border-slate-100 hover:border-pink-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-pink-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-pink-600">Ibu</span></a>` : '';
-                const waWali = formatWaNumber(student.WA_Wali) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Wali)}" target="_blank" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-50 hover:bg-purple-50 border border-slate-100 hover:border-purple-200 transition-all group"><div class="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform text-purple-500"><i class="fa-brands fa-whatsapp fa-lg"></i></div><span class="text-xs font-semibold text-slate-600 group-hover:text-purple-600">Wali</span></a>` : '';
+                // Tombol WA format Pill (Menyamping) agar ringkas
+                const waSiswa = formatWaNumber(student.WA_Siswa) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Siswa)}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-colors text-xs font-semibold whitespace-nowrap"><i class="fa-brands fa-whatsapp text-sm"></i> Siswa</a>` : '';
+                const waAyah = formatWaNumber(student.WA_Ayah) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Ayah)}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors text-xs font-semibold whitespace-nowrap"><i class="fa-brands fa-whatsapp text-sm"></i> Ayah</a>` : '';
+                const waIbu = formatWaNumber(student.WA_Ibu) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Ibu)}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-50 text-pink-600 border border-pink-200 hover:bg-pink-100 transition-colors text-xs font-semibold whitespace-nowrap"><i class="fa-brands fa-whatsapp text-sm"></i> Ibu</a>` : '';
+                const waWali = formatWaNumber(student.WA_Wali) ? `<a href="https://wa.me/${formatWaNumber(student.WA_Wali)}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition-colors text-xs font-semibold whitespace-nowrap"><i class="fa-brands fa-whatsapp text-sm"></i> Wali</a>` : '';
 
+                // Struktur Layout Kartu: Nama di kiri/atas, Tombol di Kanan/Bawah
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-xl font-bold text-slate-800">${student.Nama_Siswa}</h3>
-                            <div class="flex gap-2 mt-1">
-                                <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-md">Kelas ${student.Kelas || '-'}</span>
-                                <span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">Absen: ${student.No_Absen || '-'}</span>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="flex-1">
+                            <h3 class="text-[15px] font-bold text-slate-800 leading-tight">${student.Nama_Siswa}</h3>
+                            <div class="flex flex-wrap gap-2 mt-1.5">
+                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded">Kls ${student.Kelas || '-'}</span>
+                                <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-bold rounded">Absen: ${student.No_Absen || '-'}</span>
                             </div>
                         </div>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
-                        ${waSiswa}
-                        ${waAyah}
-                        ${waIbu}
-                        ${waWali}
-                        ${(!waSiswa && !waAyah && !waIbu && !waWali) ? '<p class="col-span-4 text-xs text-slate-400 italic text-center">Tidak ada data kontak tersedia.</p>' : ''}
+                        
+                        <div class="flex flex-wrap gap-2 sm:justify-end">
+                            ${waSiswa}
+                            ${waAyah}
+                            ${waIbu}
+                            ${waWali}
+                            ${(!waSiswa && !waAyah && !waIbu && !waWali) ? '<span class="text-[11px] text-slate-400 italic py-1">Tidak ada kontak</span>' : ''}
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // Fungsi filter data cerdas
+        // Fungsi filter data 
         function filterData() {
             const searchName = document.getElementById('searchName').value.toLowerCase();
             const filterKelas = document.getElementById('filterKelas').value.toLowerCase();
@@ -186,12 +173,12 @@
             renderData(filtered);
         }
 
-        // Event Listeners untuk Search Bar & Dropdown
+        // Event Listeners
         document.getElementById('searchName').addEventListener('input', filterData);
         document.getElementById('filterKelas').addEventListener('change', filterData);
         document.getElementById('filterAbsen').addEventListener('input', filterData);
 
-        // Inisialisasi awal
+        // Mulai tarik data
         fetchData();
     </script>
 </body>
